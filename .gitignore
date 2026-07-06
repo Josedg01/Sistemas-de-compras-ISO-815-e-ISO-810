@@ -1,0 +1,70 @@
+## .NET build results
+bin/
+obj/
+out/
+
+## Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Rider
+.idea/
+*.sln.iml
+
+## Build artifacts
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+## EF Core
+*.mdf
+*.ldf
+*.ndf
+
+## ASP.NET Core secrets / local overrides
+appsettings.*.local.json
+appsettings.Production.json
+secrets.json
+*.pfx
+
+## Rider/VS test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Environment files
+.env
+.env.*
+
+## Angular frontend (future)
+node_modules/
+dist/
+.angular/
+npm-debug.log*

@@ -1,11 +1,51 @@
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using SistemaDeCompras.Data;
+using SistemaDeCompras.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+const string AngularCorsPolicy = "AngularCorsPolicy";
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Add services to the container.
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.Configure<ContabilidadOptions>(
+    builder.Configuration.GetSection(ContabilidadOptions.SectionName));
+
+builder.Services.AddHttpClient<IContabilidadClient, ContabilidadClient>((sp, client) =>
+{
+    var options = builder.Configuration.GetSection(ContabilidadOptions.SectionName).Get<ContabilidadOptions>()
+        ?? new ContabilidadOptions();
+    if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+    {
+        client.BaseAddress = new Uri(options.BaseUrl);
+    }
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds > 0 ? options.TimeoutSeconds : 15);
+});
+
+builder.Services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(AngularCorsPolicy, policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -17,6 +57,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(AngularCorsPolicy);
 
 app.UseAuthorization();
 

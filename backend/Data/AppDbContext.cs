@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaDeCompras.Models.Entities;
+using SistemaDeCompras.Models.Enums;
 
 namespace SistemaDeCompras.Data;
 
@@ -105,5 +106,37 @@ public class AppDbContext : DbContext
                 .HasForeignKey(a => a.OrdenCompraNumero)
                 .OnDelete(DeleteBehavior.SetNull);
         });
+
+        SeedData(modelBuilder);
+    }
+
+    private static void SeedData(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Departamento>().HasData(
+            new Departamento { Id = 1, Nombre = "Compras", Estado = EstadoRegistro.Activo },
+            new Departamento { Id = 2, Nombre = "Contabilidad", Estado = EstadoRegistro.Activo },
+            new Departamento { Id = 3, Nombre = "Almacen", Estado = EstadoRegistro.Activo }
+        );
+
+        modelBuilder.Entity<UnidadMedida>().HasData(
+            new UnidadMedida { Id = 1, Descripcion = "Unidad", Estado = EstadoRegistro.Activo },
+            new UnidadMedida { Id = 2, Descripcion = "Caja", Estado = EstadoRegistro.Activo },
+            new UnidadMedida { Id = 3, Descripcion = "Libra", Estado = EstadoRegistro.Activo }
+        );
+
+        modelBuilder.Entity<Proveedor>().HasData(
+            new Proveedor { Id = 1, CedulaRnc = "101000001", NombreComercial = "Suplidora Nacional SRL", Estado = EstadoRegistro.Activo },
+            new Proveedor { Id = 2, CedulaRnc = "101000002", NombreComercial = "Distribuidora Caribe SRL", Estado = EstadoRegistro.Activo }
+        );
+
+        modelBuilder.Entity<Empleado>().HasData(
+            new Empleado { Id = 1, Nombre = "Juan Perez", DepartamentoId = 1, Estado = EstadoRegistro.Activo },
+            new Empleado { Id = 2, Nombre = "Maria Gomez", DepartamentoId = 3, Estado = EstadoRegistro.Activo }
+        );
+
+        modelBuilder.Entity<Articulo>().HasData(
+            new Articulo { Id = 1, Descripcion = "Papel Bond 8.5x11", Marca = "Report", UnidadMedidaId = 2, Existencia = 50, Estado = EstadoRegistro.Activo },
+            new Articulo { Id = 2, Descripcion = "Tinta para impresora", Marca = "HP", UnidadMedidaId = 1, Existencia = 20, Estado = EstadoRegistro.Activo }
+        );
     }
 }

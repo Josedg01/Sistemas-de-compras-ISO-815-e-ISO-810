@@ -1,9 +1,12 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useOrdenesCompraStore } from '../stores/ordenesCompraStore'
 import { useArticulosStore } from '../stores/articulosStore'
 import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
+import { useProveedoresStore } from '../stores/proveedoresStore'
+import { useDepartamentosStore } from '../stores/departamentosStore'
+import { useEmpleadosStore } from '../stores/empleadosStore'
 import { Plus, Send, X, CheckCircle } from '@lucide/vue'
 
 const store = useOrdenesCompraStore()
@@ -15,26 +18,39 @@ const { articulos } = storeToRefs(articulosStore)
 const unidadesStore = useUnidadesMedidaStore()
 const { unidades } = storeToRefs(unidadesStore)
 
+const proveedoresStore = useProveedoresStore()
+const { proveedores } = storeToRefs(proveedoresStore)
+
+const departamentosStore = useDepartamentosStore()
+const { departamentos } = storeToRefs(departamentosStore)
+
+const empleadosStore = useEmpleadosStore()
+const { empleados } = storeToRefs(empleadosStore)
+
 onMounted(async () => {
   store.fetchOrdenes()
   if (articulos.value.length === 0) articulosStore.fetchArticulos()
   if (unidades.value.length === 0) unidadesStore.fetchUnidades()
+  if (proveedores.value.length === 0) proveedoresStore.fetchProveedores()
+  if (departamentos.value.length === 0) departamentosStore.fetchDepartamentos()
+  if (empleados.value.length === 0) empleadosStore.fetchEmpleados()
 })
 
 const showModal = ref(false)
-const asientoSuccess = ref(null)
+const asientoSuccess = ref(false)
+const orderRecibidaId = ref(null)
 
 const form = ref({
-  numeroOrden: `OC-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
   fechaOrden: new Date().toISOString().split('T')[0],
-  estado: 'Generada',
+  proveedorId: '',
+  departamentoId: '',
+  empleadoId: '',
   articuloId: '',
   cantidad: 1,
   unidadMedidaId: '',
   costoUnitario: 0
 })
 
-// Auto-seleccionar unidad y costo al elegir artículo
 const onArticuloChange = () => {
   const art = articulos.value.find(a => a.id === form.value.articuloId)
   if (art) {
@@ -44,9 +60,10 @@ const onArticuloChange = () => {
 
 const openModal = () => {
   form.value = {
-    numeroOrden: `OC-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
     fechaOrden: new Date().toISOString().split('T')[0],
-    estado: 'Generada',
+    proveedorId: '',
+    departamentoId: '',
+    empleadoId: '',
     articuloId: '',
     cantidad: 1,
     unidadMedidaId: '',
@@ -58,30 +75,35 @@ const openModal = () => {
 const closeModal = () => showModal.value = false
 
 const save = async () => {
-  await store.addOrden({ ...form.value })
+  const payload = {
+    fechaOrden: form.value.fechaOrden,
+    proveedorId: form.value.proveedorId,
+    departamentoId: form.value.departamentoId,
+    empleadoId: form.value.empleadoId,
+    detalles: [
+      {
+        articuloId: form.value.articuloId,
+        cantidad: form.value.cantidad,
+        unidadMedidaId: form.value.unidadMedidaId,
+        costoUnitario: form.value.costoUnitario
+      }
+    ]
+  }
+  await store.addOrden(payload)
   closeModal()
 }
 
 const sendAsiento = async (orden) => {
-  if (confirm(`¿Enviar asiento contable para ${orden.numeroOrden}?`)) {
+  if (confirm(`¿Marcar la orden ${orden.numero} como recibida? Esto generará el asiento contable.`)) {
     try {
-      const asiento = await store.procesarAsientoContable(orden)
-      asientoSuccess.value = asiento
-      setTimeout(() => asientoSuccess.value = null, 5000)
+      await store.recibirOrden(orden.numero)
+      asientoSuccess.value = true
+      orderRecibidaId.value = orden.numero
+      setTimeout(() => asientoSuccess.value = false, 5000)
     } catch (e) {
-      alert("Error al enviar asiento contable.")
+      alert("Error al recibir orden.")
     }
   }
-}
-
-const getArticuloNombre = (id) => {
-  const a = articulos.value.find(x => x.id === id)
-  return a ? a.descripcion : 'N/A'
-}
-
-const getUnidadNombre = (id) => {
-  const u = unidades.value.find(x => x.id === id)
-  return u ? u.descripcion : 'N/A'
 }
 
 const formatCurrency = (val) => {
@@ -102,8 +124,8 @@ const formatCurrency = (val) => {
     <div v-if="asientoSuccess" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3">
       <CheckCircle class="w-5 h-5 text-emerald-600 mt-0.5" />
       <div>
-        <h4 class="text-emerald-800 font-semibold">Asiento Contable Enviado Exitosamente</h4>
-        <p class="text-emerald-600 text-sm mt-1">Identificador: {{ asientoSuccess.identificadorAsiento }} | Monto: {{ formatCurrency(asientoSuccess.montoAsiento) }}</p>
+        <h4 class="text-emerald-800 font-semibold">Orden Recibida / Asiento Generado</h4>
+        <p class="text-emerald-600 text-sm mt-1">La orden No. {{ orderRecibidaId }} ha sido recibida y el asiento contable fue enviado al backend.</p>
       </div>
     </div>
 
@@ -113,72 +135,99 @@ const formatCurrency = (val) => {
     </div>
 
     <!-- Table -->
-    <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <table class="w-full text-left border-collapse">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[800px]">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
             <th class="py-3 px-6 font-semibold">No. Orden</th>
             <th class="py-3 px-6 font-semibold">Fecha</th>
-            <th class="py-3 px-6 font-semibold">Artículo</th>
-            <th class="py-3 px-6 font-semibold text-right">Cant.</th>
+            <th class="py-3 px-6 font-semibold">Proveedor</th>
+            <th class="py-3 px-6 font-semibold">Departamento</th>
+            <th class="py-3 px-6 font-semibold">Artículo(s)</th>
             <th class="py-3 px-6 font-semibold text-right">Total</th>
             <th class="py-3 px-6 font-semibold text-center">Estado</th>
             <th class="py-3 px-6 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in ordenes" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-            <td class="py-3 px-6 font-medium text-gray-800">{{ item.numeroOrden }}</td>
-            <td class="py-3 px-6 text-gray-600">{{ item.fechaOrden }}</td>
-            <td class="py-3 px-6 text-gray-600">{{ getArticuloNombre(item.articuloId) }}</td>
-            <td class="py-3 px-6 text-right text-gray-600">{{ item.cantidad }} {{ getUnidadNombre(item.unidadMedidaId) }}</td>
-            <td class="py-3 px-6 text-right font-medium text-gray-800">{{ formatCurrency(item.cantidad * item.costoUnitario) }}</td>
+          <tr v-for="item in ordenes" :key="item.numero" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+            <td class="py-3 px-6 font-medium text-gray-800">OC-{{ item.numero }}</td>
+            <td class="py-3 px-6 text-gray-600">{{ new Date(item.fechaOrden).toLocaleDateString() }}</td>
+            <td class="py-3 px-6 text-gray-600">{{ item.proveedorNombre }}</td>
+            <td class="py-3 px-6 text-gray-600">{{ item.departamentoNombre }}</td>
+            <td class="py-3 px-6 text-gray-600">
+              <span v-if="item.detalles && item.detalles.length > 0">
+                {{ item.detalles[0].cantidad }} {{ item.detalles[0].unidadMedidaDescripcion }} de {{ item.detalles[0].articuloDescripcion }}
+              </span>
+            </td>
+            <td class="py-3 px-6 text-right font-medium text-gray-800">{{ formatCurrency(item.total) }}</td>
             <td class="py-3 px-6 text-center">
               <span :class="[
                 'px-3 py-1 rounded-full text-xs font-medium',
-                item.estado === 'Contabilizada' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                item.estado === 'Recibida' ? 'bg-blue-100 text-blue-700' : 
+                item.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
               ]">
                 {{ item.estado }}
               </span>
             </td>
             <td class="py-3 px-6 text-right">
-              <button v-if="item.estado !== 'Contabilizada'" @click="sendAsiento(item)" class="text-emerald-600 hover:text-emerald-800 mr-3 p-1 rounded-md hover:bg-emerald-50 transition-colors inline-block" title="Enviar Asiento Contable">
+              <button v-if="item.estado !== 'Recibida' && item.estado !== 'Cancelada'" @click="sendAsiento(item)" class="text-emerald-600 hover:text-emerald-800 mr-3 p-1 rounded-md hover:bg-emerald-50 transition-colors inline-block" title="Marcar como Recibida (Enviar Asiento)">
                 <Send class="w-4 h-4" />
               </button>
             </td>
           </tr>
-          <tr v-if="ordenes.length === 0"><td colspan="7" class="py-8 text-center text-gray-500">No hay órdenes de compra registradas.</td></tr>
+          <tr v-if="ordenes.length === 0"><td colspan="8" class="py-8 text-center text-gray-500">No hay órdenes de compra registradas.</td></tr>
         </tbody>
       </table>
     </div>
 
     <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
           <h3 class="text-lg font-bold text-gray-800">Nueva Orden de Compra</h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><X class="w-5 h-5" /></button>
         </div>
         <form @submit.prevent="save" class="p-6">
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">No. Orden (Auto)</label>
-              <input v-model="form.numeroOrden" type="text" readonly class="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg outline-none text-gray-500">
-            </div>
-            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
               <input v-model="form.fechaOrden" type="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
-            <div class="col-span-2">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Artículo</label>
-              <select v-model="form.articuloId" @change="onArticuloChange" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
-                <option value="" disabled>Seleccione un artículo...</option>
-                <option v-for="a in articulos" :key="a.id" :value="a.id">{{ a.descripcion }} (Ex: {{ a.existencia }})</option>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <select v-model="form.proveedorId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="" disabled>Seleccione proveedor...</option>
+                <option v-for="p in proveedores" :key="p.id" :value="p.id">{{ p.nombreComercial }}</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+              <select v-model="form.departamentoId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="" disabled>Seleccione departamento...</option>
+                <option v-for="d in departamentos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
               </select>
             </div>
             <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Empleado</label>
+              <select v-model="form.empleadoId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="" disabled>Seleccione empleado...</option>
+                <option v-for="e in empleados" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+              </select>
+            </div>
+            
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Artículo a Comprar</label>
+              <select v-model="form.articuloId" @change="onArticuloChange" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="" disabled>Seleccione un artículo...</option>
+                <option v-for="a in articulos" :key="a.id" :value="a.id">{{ a.descripcion }} (Disponible: {{ a.existencia }})</option>
+              </select>
+            </div>
+            
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
-              <input v-model="form.cantidad" type="number" min="1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <input v-model="form.cantidad" type="number" min="1" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Costo Unitario</label>
@@ -191,9 +240,9 @@ const formatCurrency = (val) => {
             <span class="text-xl font-bold text-gray-800">{{ formatCurrency(form.cantidad * form.costoUnitario) }}</span>
           </div>
 
-          <div class="flex justify-end gap-3">
-            <button type="button" @click="closeModal" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium">Cancelar</button>
-            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium">Generar Orden</button>
+          <div class="flex justify-end gap-3 sticky bottom-0 bg-white py-2">
+            <button type="button" @click="closeModal" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Cancelar</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors">Guardar Orden</button>
           </div>
         </form>
       </div>

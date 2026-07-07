@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getOrdenesCompra, createOrdenCompra, updateOrdenCompra, enviarAsientoContable } from '../services/ordenesCompraService'
+import { getOrdenesCompra, createOrdenCompra, recibirOrdenCompra } from '../services/ordenesCompraService'
 
 export const useOrdenesCompraStore = defineStore('ordenesCompra', {
   state: () => ({
@@ -25,33 +25,22 @@ export const useOrdenesCompraStore = defineStore('ordenesCompra', {
         this.ordenes.push(nuevo)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }
     },
-    async procesarAsientoContable(orden) {
+    async recibirOrden(numero) {
       this.isLoading = true
       try {
-        // Preparar payload para Contabilidad
-        const asientoData = {
-          identificadorAsiento: `AS-${Date.now()}`,
-          descripcion: `Compra OC ${orden.numeroOrden}`,
-          identificadorTipoInventario: 1, // Fijo o configurable
-          cuentaContable: '4-1000-01', // Fijo de ejemplo
-          tipoMovimiento: 'DB',
-          fechaAsiento: new Date().toISOString().split('T')[0],
-          montoAsiento: orden.cantidad * orden.costoUnitario,
-          estado: 'Procesado'
+        const actualizado = await recibirOrdenCompra(numero)
+        
+        const index = this.ordenes.findIndex(o => o.numero === numero || o.id === numero || o.numeroOrden === numero)
+        if (index !== -1) {
+          this.ordenes[index] = actualizado
         }
         
-        await enviarAsientoContable(asientoData)
-        
-        // Actualizar estado de la orden a 'Contabilizada'
-        const actualizado = await updateOrdenCompra(orden.id, { ...orden, estado: 'Contabilizada' })
-        const index = this.ordenes.findIndex(o => o.id === orden.id)
-        if (index !== -1) this.ordenes[index] = actualizado
-        
-        return asientoData
+        return actualizado
       } catch (err) {
         this.error = err.message
         throw err

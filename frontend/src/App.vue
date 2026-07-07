@@ -34,6 +34,12 @@ import { LayoutDashboard, Users, Scale, Factory, Package, ShoppingCart, Search }
         <RouterLink to="/consulta" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-slate-800" active-class="bg-emerald-600 text-white hover:bg-emerald-700">
           <Search class="w-5 h-5" /> Consulta
         </RouterLink>
+        <RouterLink to="/empleados" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-slate-800" active-class="bg-emerald-600 text-white hover:bg-emerald-700">
+          <Users class="w-5 h-5" /> Empleados
+        </RouterLink>
+        <RouterLink to="/asientos-contables" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-slate-800" active-class="bg-emerald-600 text-white hover:bg-emerald-700">
+          <Scale class="w-5 h-5" /> Contabilidad
+        </RouterLink>
       </nav>
     </aside>
 

@@ -2,25 +2,28 @@ import api from './api'
 
 const ENDPOINT = '/proveedores'
 
-export const getProveedores = async () => {
-  // return (await api.get(ENDPOINT)).data
-  return new Promise(resolve => setTimeout(() => resolve([
-    { id: 1, cedulaRnc: '101001001', nombreComercial: 'Ferretería Popular', estado: 'Activo' },
-    { id: 2, cedulaRnc: '101001002', nombreComercial: 'Tech Solutions SA', estado: 'Activo' },
-  ]), 500))
+export const getProveedores = async (estado) => {
+  const params = estado ? { estado } : {}
+  const response = await api.get(ENDPOINT, { params })
+  return response.data
+}
+
+export const getProveedorById = async (id) => {
+  const response = await api.get(`${ENDPOINT}/${id}`)
+  return response.data
 }
 
 export const createProveedor = async (data) => {
-  // return await api.post(ENDPOINT, data)
-  return new Promise(resolve => setTimeout(() => resolve({ ...data, id: Date.now() }), 500))
+  const response = await api.post(ENDPOINT, data)
+  return response.data
 }
 
 export const updateProveedor = async (id, data) => {
-  // return await api.put(`${ENDPOINT}/${id}`, data)
-  return new Promise(resolve => setTimeout(() => resolve(data), 500))
+  const response = await api.put(`${ENDPOINT}/${id}`, data)
+  return response.data
 }
 
 export const deleteProveedor = async (id) => {
-  // return await api.delete(`${ENDPOINT}/${id}`)
-  return new Promise(resolve => setTimeout(() => resolve({ success: true }), 500))
+  const response = await api.delete(`${ENDPOINT}/${id}`)
+  return response.data
 }

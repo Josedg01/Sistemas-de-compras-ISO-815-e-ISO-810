@@ -1,28 +1,33 @@
 import api from './api'
 
 const ENDPOINT = '/ordenes-compra'
-const ENDPOINT_CONTABILIDAD = '/ws-contabilidad/asientos'
 
-export const getOrdenesCompra = async () => {
-  // return (await api.get(ENDPOINT)).data
-  return new Promise(resolve => setTimeout(() => resolve([
-    { id: 1, numeroOrden: 'OC-2023-001', fechaOrden: '2023-10-15', estado: 'Aprobada', articuloId: 1, cantidad: 5, unidadMedidaId: 1, costoUnitario: 800 },
-  ]), 500))
+export const getOrdenesCompra = async (filtros = {}) => {
+  const response = await api.get(ENDPOINT, { params: filtros })
+  return response.data
+}
+
+export const getOrdenCompraByNumero = async (numero) => {
+  const response = await api.get(`${ENDPOINT}/${numero}`)
+  return response.data
 }
 
 export const createOrdenCompra = async (data) => {
-  // return await api.post(ENDPOINT, data)
-  return new Promise(resolve => setTimeout(() => resolve({ ...data, id: Date.now() }), 500))
+  const response = await api.post(ENDPOINT, data)
+  return response.data
 }
 
-export const updateOrdenCompra = async (id, data) => {
-  // return await api.put(`${ENDPOINT}/${id}`, data)
-  return new Promise(resolve => setTimeout(() => resolve(data), 500))
+export const aprobarOrdenCompra = async (numero) => {
+  const response = await api.post(`${ENDPOINT}/${numero}/aprobar`)
+  return response.data
 }
 
-export const enviarAsientoContable = async (asientoData) => {
-  // Endpoint de integración simulado
-  // return await api.post(ENDPOINT_CONTABILIDAD, asientoData)
-  console.log("Enviando a Contabilidad: ", asientoData);
-  return new Promise(resolve => setTimeout(() => resolve({ success: true, asiento: asientoData }), 800))
+export const recibirOrdenCompra = async (numero) => {
+  const response = await api.post(`${ENDPOINT}/${numero}/recibir`)
+  return response.data
+}
+
+export const cancelarOrdenCompra = async (numero) => {
+  const response = await api.post(`${ENDPOINT}/${numero}/cancelar`)
+  return response.data
 }

@@ -44,6 +44,7 @@ x86/
 *.ndf
 
 ## ASP.NET Core secrets / local overrides
+appsettings.Local.json
 appsettings.*.local.json
 appsettings.Production.json
 secrets.json

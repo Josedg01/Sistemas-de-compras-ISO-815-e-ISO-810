@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SistemaDeCompras", "backend\SistemaDeCompras.csproj", "{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "frontend", "frontend", "{1135E853-C642-447D-819F-10B94823818B}"
+	ProjectSection(SolutionItems) = preProject
+		frontend\package.json = frontend\package.json
+		frontend\package-lock.json = frontend\package-lock.json
+		frontend\vite.config.js = frontend\vite.config.js
+		frontend\index.html = frontend\index.html
+		frontend\README.md = frontend\README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|x64.Build.0 = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Debug|x86.Build.0 = Debug|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|x64.ActiveCfg = Release|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|x64.Build.0 = Release|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|x86.ActiveCfg = Release|Any CPU
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5A3A2E35-3205-409B-A3C1-CABD113CDDDD} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+	EndGlobalSection
+EndGlobal

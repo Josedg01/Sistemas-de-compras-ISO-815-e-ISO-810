@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getOrdenesCompra, createOrdenCompra, recibirOrdenCompra } from '../services/ordenesCompraService'
+import { getOrdenesCompra, createOrdenCompra, recibirOrdenCompra, aprobarOrdenCompra } from '../services/ordenesCompraService'
 
 export const useOrdenesCompraStore = defineStore('ordenesCompra', {
   state: () => ({
@@ -40,6 +40,22 @@ export const useOrdenesCompraStore = defineStore('ordenesCompra', {
           this.ordenes[index] = actualizado
         }
         
+        return actualizado
+      } catch (err) {
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+    async aprobarOrden(numero) {
+      this.isLoading = true
+      try {
+        const actualizado = await aprobarOrdenCompra(numero)
+        const index = this.ordenes.findIndex(o => o.numero === numero || o.id === numero || o.numeroOrden === numero)
+        if (index !== -1) {
+          this.ordenes[index] = actualizado
+        }
         return actualizado
       } catch (err) {
         this.error = err.message

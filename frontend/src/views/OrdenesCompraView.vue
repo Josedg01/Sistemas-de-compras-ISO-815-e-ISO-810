@@ -7,7 +7,7 @@ import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
 import { useProveedoresStore } from '../stores/proveedoresStore'
 import { useDepartamentosStore } from '../stores/departamentosStore'
 import { useEmpleadosStore } from '../stores/empleadosStore'
-import { Plus, Send, X, CheckCircle } from '@lucide/vue'
+import { Plus, Send, X, CheckCircle, Check } from '@lucide/vue'
 
 const store = useOrdenesCompraStore()
 const { ordenes, isLoading } = storeToRefs(store)
@@ -73,6 +73,16 @@ const openModal = () => {
 }
 
 const closeModal = () => showModal.value = false
+
+const aprobar = async (orden) => {
+  if (confirm(`¿Está seguro de aprobar la orden ${orden.numero}?`)) {
+    try {
+      await store.aprobarOrden(orden.numero)
+    } catch (e) {
+      alert("Error al aprobar orden: " + e.message)
+    }
+  }
+}
 
 const save = async () => {
   const payload = {
@@ -171,7 +181,10 @@ const formatCurrency = (val) => {
               </span>
             </td>
             <td class="py-3 px-6 text-right">
-              <button v-if="item.estado !== 'Recibida' && item.estado !== 'Cancelada'" @click="sendAsiento(item)" class="text-emerald-600 hover:text-emerald-800 mr-3 p-1 rounded-md hover:bg-emerald-50 transition-colors inline-block" title="Marcar como Recibida (Enviar Asiento)">
+              <button v-if="item.estado === 'Pendiente'" @click="aprobar(item)" class="text-blue-600 hover:text-blue-800 mr-3 p-1 rounded-md hover:bg-blue-50 transition-colors inline-block" title="Aprobar Orden">
+                <Check class="w-4 h-4" />
+              </button>
+              <button v-if="item.estado === 'Aprobada'" @click="sendAsiento(item)" class="text-emerald-600 hover:text-emerald-800 mr-3 p-1 rounded-md hover:bg-emerald-50 transition-colors inline-block" title="Marcar como Recibida (Generar Asiento)">
                 <Send class="w-4 h-4" />
               </button>
             </td>

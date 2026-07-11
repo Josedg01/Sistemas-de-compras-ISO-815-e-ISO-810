@@ -25,6 +25,7 @@ export const useProveedoresStore = defineStore('proveedores', {
         this.proveedores.push(nuevo)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }
@@ -37,6 +38,7 @@ export const useProveedoresStore = defineStore('proveedores', {
         if (index !== -1) this.proveedores[index] = actualizado
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }
@@ -48,6 +50,7 @@ export const useProveedoresStore = defineStore('proveedores', {
         this.proveedores = this.proveedores.filter(p => p.id !== id)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }

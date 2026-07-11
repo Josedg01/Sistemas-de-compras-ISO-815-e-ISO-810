@@ -9,7 +9,7 @@ public class OrdenCompraDetalle
     public int OrdenCompraNumero { get; set; }
     public OrdenCompra? OrdenCompra { get; set; }
 
-    public int ArticuloId { get; set; }
+    public int? ArticuloId { get; set; }
     public Articulo? Articulo { get; set; }
 
     public decimal Cantidad { get; set; }

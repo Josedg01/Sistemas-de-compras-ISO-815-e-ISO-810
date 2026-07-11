@@ -67,7 +67,7 @@ public class EmpleadosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, EmpleadoUpsertDto dto)
+    public async Task<ActionResult<EmpleadoDto>> Update(int id, EmpleadoUpsertDto dto)
     {
         var empleado = await _context.Empleados.FindAsync(id);
         if (empleado is null) return NotFound();
@@ -79,16 +79,22 @@ public class EmpleadosController : ControllerBase
         empleado.DepartamentoId = dto.DepartamentoId;
         empleado.Estado = dto.Estado;
         await _context.SaveChangesAsync();
-        return NoContent();
+        await _context.Entry(empleado).Reference(e => e.Departamento).LoadAsync();
+        return Ok(ToDto(empleado));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Deactivate(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var empleado = await _context.Empleados.FindAsync(id);
         if (empleado is null) return NotFound();
 
-        empleado.Estado = EstadoRegistro.Inactivo;
+        var enUso = await _context.OrdenesCompra.AnyAsync(o => o.EmpleadoId == id
+            && o.Estado != EstadoOrdenCompra.Recibida && o.Estado != EstadoOrdenCompra.Cancelada);
+        if (enUso)
+            return BadRequest(new { message = "No se puede eliminar el empleado porque tiene órdenes de compra pendientes/aprobadas asociadas." });
+
+        _context.Empleados.Remove(empleado);
         await _context.SaveChangesAsync();
         return NoContent();
     }

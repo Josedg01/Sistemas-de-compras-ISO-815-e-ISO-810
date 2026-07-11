@@ -50,6 +50,7 @@ export const useDepartamentosStore = defineStore('departamentos', {
         this.departamentos = this.departamentos.filter(d => d.id !== id)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }

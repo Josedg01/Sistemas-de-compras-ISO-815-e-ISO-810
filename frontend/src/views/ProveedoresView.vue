@@ -26,8 +26,10 @@ const filteredProveedores = computed(() => {
 const showModal = ref(false)
 const isEditing = ref(false)
 const form = ref({ id: null, tipoDocumento: 'RNC', cedulaRnc: '', nombreComercial: '', estado: 'Activo' })
+const formError = ref('')
 
 const openModal = (item = null) => {
+  formError.value = ''
   if (item) {
     isEditing.value = true
     const tipoDoc = (item.cedulaRnc && item.cedulaRnc.replace(/-/g, '').length === 11) ? 'Cedula' : 'RNC'
@@ -41,70 +43,34 @@ const openModal = (item = null) => {
 
 const closeModal = () => showModal.value = false
 
-const esUnRNCValido = (pRNC, tipo) => {
-  if (!pRNC) return false;
-  const vcRNC = pRNC.replace(/-/g, "").replace(/ /g, "");
-
-  if (tipo === 'RNC') {
-    if (vcRNC.length !== 9) return false;
-    // Solo validar que sean 9 números
-    return /^\d{9}$/.test(vcRNC);
-  } else if (tipo === 'Cedula') {
-    if (vcRNC.length !== 11) return false;
-    
-    // Validación Cédula (11 dígitos) - Algoritmo de Luhn Mod 10
-    let vnTotal = 0;
-    const digitoMult = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
-    
-    for (let vDig = 1; vDig <= 10; vDig++) {
-      let vCalculo = parseInt(vcRNC.substring(vDig - 1, vDig)) * digitoMult[vDig - 1];
-      if (vCalculo < 10) {
-        vnTotal += vCalculo;
-      } else {
-        vnTotal += parseInt(vCalculo.toString().substring(0, 1)) + parseInt(vCalculo.toString().substring(1, 2));
-      }
-    }
-    
-    const verificador = parseInt(vcRNC.substring(10, 11));
-    const residuo = vnTotal % 10;
-    if (residuo === 0 && verificador === 0) return true;
-    if ((10 - residuo) === verificador) return true;
-    return false;
-  }
-  
-  return false;
-}
-
 const save = async () => {
-  if (!esUnRNCValido(form.value.cedulaRnc, form.value.tipoDocumento)) {
-    alert("El documento introducido no es válido para el tipo seleccionado.");
-    return;
-  }
+  formError.value = ''
 
   try {
     if (isEditing.value) {
       await store.editProveedor(form.value.id, form.value)
     } else {
-      await store.addProveedor({ 
+      await store.addProveedor({
         tipoDocumento: form.value.tipoDocumento,
-        cedulaRnc: form.value.cedulaRnc, 
-        nombreComercial: form.value.nombreComercial, 
-        estado: form.value.estado 
+        cedulaRnc: form.value.cedulaRnc,
+        nombreComercial: form.value.nombreComercial,
+        estado: form.value.estado
       })
     }
     closeModal()
   } catch (error) {
-    if (error.response && error.response.data && error.response.data.message) {
-      alert("Error: " + error.response.data.message);
-    } else {
-      alert("Error al guardar el proveedor. Verifique los datos o revise la consola.");
-    }
+    formError.value = error.response?.data?.message
+      || "Error al guardar el proveedor. Verifique los datos o revise la consola."
   }
 }
 
 const remove = async (id) => {
   if (confirm('¿Está seguro de eliminar este proveedor?')) {
-    await store.removeProveedor(id)
+    try {
+      await store.removeProveedor(id)
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al eliminar el proveedor.")
+    }
   }
 }
 </script>
@@ -169,6 +135,9 @@ const remove = async (id) => {
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><X class="w-5 h-5" /></button>
         </div>
         <form @submit.prevent="save" class="p-6">
+          <div v-if="formError" class="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            {{ formError }}
+          </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Documento</label>
             <div class="flex gap-4">

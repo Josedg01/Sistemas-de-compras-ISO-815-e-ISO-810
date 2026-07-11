@@ -55,8 +55,12 @@ const save = async () => {
 }
 
 const remove = async (id) => {
-  if (confirm('¿Está seguro de desactivar este empleado?')) {
-    await store.removeEmpleado(id)
+  if (confirm('¿Está seguro de eliminar este empleado?')) {
+    try {
+      await store.removeEmpleado(id)
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al eliminar el empleado.")
+    }
   }
 }
 </script>

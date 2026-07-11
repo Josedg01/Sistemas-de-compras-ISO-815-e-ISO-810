@@ -27,8 +27,27 @@ public class ProveedoresController : ControllerBase
         
         if (vcRNC.Length == 9)
         {
-            // Solo validar que sean 9 numeros
-            return vcRNC.All(char.IsDigit);
+            if (!vcRNC.All(char.IsDigit)) return false;
+
+            // Validacion RNC (9 digitos) - Algoritmo Modulo 11
+            if (!"145".Contains(vcRNC.Substring(0, 1)))
+                return false;
+
+            int vnTotal = 0;
+            int[] digitoMult = new int[8] { 7, 9, 8, 6, 5, 4, 3, 2 };
+
+            for (int vDig = 1; vDig <= 8; vDig++)
+            {
+                int vCalculo = Int32.Parse(vcRNC.Substring(vDig - 1, 1)) * digitoMult[vDig - 1];
+                vnTotal += vCalculo;
+            }
+
+            int verificador = Int32.Parse(vcRNC.Substring(8, 1));
+            int residuo = vnTotal % 11;
+
+            if ((residuo == 0 || residuo == 1) && verificador == 1) return true;
+            if ((11 - residuo) == verificador) return true;
+            return false;
         }
         else if (vcRNC.Length == 11)
         {
@@ -98,7 +117,7 @@ public class ProveedoresController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, ProveedorUpsertDto dto)
+    public async Task<ActionResult<ProveedorDto>> Update(int id, ProveedorUpsertDto dto)
     {
         if (!esUnRNCValido(dto.CedulaRnc))
             return BadRequest(new { message = "El RNC/Cédula proporcionado no es válido." });
@@ -113,16 +132,21 @@ public class ProveedoresController : ControllerBase
         proveedor.NombreComercial = dto.NombreComercial;
         proveedor.Estado = dto.Estado;
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok(ToDto(proveedor));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Deactivate(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var proveedor = await _context.Proveedores.FindAsync(id);
         if (proveedor is null) return NotFound();
 
-        proveedor.Estado = EstadoRegistro.Inactivo;
+        var tieneOrdenes = await _context.OrdenesCompra.AnyAsync(o => o.ProveedorId == id
+            && o.Estado != EstadoOrdenCompra.Recibida && o.Estado != EstadoOrdenCompra.Cancelada);
+        if (tieneOrdenes)
+            return BadRequest(new { message = "No se puede eliminar el proveedor porque tiene órdenes de compra pendientes/aprobadas asociadas." });
+
+        _context.Proveedores.Remove(proveedor);
         await _context.SaveChangesAsync();
         return NoContent();
     }

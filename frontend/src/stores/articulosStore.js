@@ -48,6 +48,7 @@ export const useArticulosStore = defineStore('articulos', {
         this.articulos = this.articulos.filter(a => a.id !== id)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }

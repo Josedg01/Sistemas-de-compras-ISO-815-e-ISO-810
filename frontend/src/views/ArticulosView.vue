@@ -1,9 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useArticulosStore } from '../stores/articulosStore'
 import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
-import { Plus, Edit2, Trash2, X } from '@lucide/vue'
+import { Plus, Edit2, Trash2, X, Search } from '@lucide/vue'
 
 const store = useArticulosStore()
 const { articulos, isLoading } = storeToRefs(store)
@@ -16,6 +16,19 @@ onMounted(async () => {
   if (unidades.value.length === 0) {
     unidadesStore.fetchUnidades()
   }
+})
+
+const searchQuery = ref('')
+const filteredArticulos = computed(() => {
+  if (!searchQuery.value) return articulos.value
+  const q = searchQuery.value.toLowerCase()
+  return articulos.value.filter(a => 
+    a.descripcion.toLowerCase().includes(q) ||
+    a.marca.toLowerCase().includes(q) ||
+    a.estado.toLowerCase().includes(q) ||
+    a.id.toString().includes(q) ||
+    getUnidadNombre(a.unidadMedidaId).toLowerCase().includes(q)
+  )
 })
 
 const showModal = ref(false)
@@ -36,6 +49,11 @@ const openModal = (item = null) => {
 const closeModal = () => showModal.value = false
 
 const save = async () => {
+  if (form.value.existencia <= 0) {
+    alert("La existencia debe ser mayor a 0.")
+    return
+  }
+
   if (isEditing.value) {
     await store.editArticulo(form.value.id, form.value)
   } else {
@@ -78,6 +96,12 @@ const getUnidadNombre = (id) => {
 
     <!-- Table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+        <div class="relative w-full max-w-md">
+          <Search class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" v-model="searchQuery" placeholder="Buscar artículos..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
@@ -91,7 +115,7 @@ const getUnidadNombre = (id) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in articulos" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <tr v-for="item in filteredArticulos" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
             <td class="py-3 px-6 text-gray-600">{{ item.id }}</td>
             <td class="py-3 px-6 font-medium text-gray-800">{{ item.descripcion }}</td>
             <td class="py-3 px-6 font-medium text-gray-600">{{ item.marca }}</td>
@@ -138,7 +162,7 @@ const getUnidadNombre = (id) => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Existencia</label>
-              <input v-model="form.existencia" type="number" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <input v-model="form.existencia" type="number" min="0.01" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>

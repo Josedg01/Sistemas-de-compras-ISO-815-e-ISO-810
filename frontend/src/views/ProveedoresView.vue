@@ -1,8 +1,8 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProveedoresStore } from '../stores/proveedoresStore'
-import { Plus, Edit2, Trash2, X } from '@lucide/vue'
+import { Plus, Edit2, Trash2, X, Search } from '@lucide/vue'
 
 const store = useProveedoresStore()
 const { proveedores, isLoading } = storeToRefs(store)
@@ -11,30 +11,95 @@ onMounted(() => {
   store.fetchProveedores()
 })
 
+const searchQuery = ref('')
+const filteredProveedores = computed(() => {
+  if (!searchQuery.value) return proveedores.value
+  const q = searchQuery.value.toLowerCase()
+  return proveedores.value.filter(p => 
+    p.nombreComercial.toLowerCase().includes(q) ||
+    p.cedulaRnc.toLowerCase().includes(q) ||
+    p.estado.toLowerCase().includes(q) ||
+    p.id.toString().includes(q)
+  )
+})
+
 const showModal = ref(false)
 const isEditing = ref(false)
-const form = ref({ id: null, cedulaRnc: '', nombreComercial: '', estado: 'Activo' })
+const form = ref({ id: null, tipoDocumento: 'RNC', cedulaRnc: '', nombreComercial: '', estado: 'Activo' })
 
 const openModal = (item = null) => {
   if (item) {
     isEditing.value = true
-    form.value = { ...item }
+    const tipoDoc = (item.cedulaRnc && item.cedulaRnc.replace(/-/g, '').length === 11) ? 'Cedula' : 'RNC'
+    form.value = { ...item, tipoDocumento: tipoDoc }
   } else {
     isEditing.value = false
-    form.value = { id: null, cedulaRnc: '', nombreComercial: '', estado: 'Activo' }
+    form.value = { id: null, tipoDocumento: 'RNC', cedulaRnc: '', nombreComercial: '', estado: 'Activo' }
   }
   showModal.value = true
 }
 
 const closeModal = () => showModal.value = false
 
-const save = async () => {
-  if (isEditing.value) {
-    await store.editProveedor(form.value.id, form.value)
-  } else {
-    await store.addProveedor({ cedulaRnc: form.value.cedulaRnc, nombreComercial: form.value.nombreComercial, estado: form.value.estado })
+const esUnRNCValido = (pRNC, tipo) => {
+  if (!pRNC) return false;
+  const vcRNC = pRNC.replace(/-/g, "").replace(/ /g, "");
+
+  if (tipo === 'RNC') {
+    if (vcRNC.length !== 9) return false;
+    // Solo validar que sean 9 números
+    return /^\d{9}$/.test(vcRNC);
+  } else if (tipo === 'Cedula') {
+    if (vcRNC.length !== 11) return false;
+    
+    // Validación Cédula (11 dígitos) - Algoritmo de Luhn Mod 10
+    let vnTotal = 0;
+    const digitoMult = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
+    
+    for (let vDig = 1; vDig <= 10; vDig++) {
+      let vCalculo = parseInt(vcRNC.substring(vDig - 1, vDig)) * digitoMult[vDig - 1];
+      if (vCalculo < 10) {
+        vnTotal += vCalculo;
+      } else {
+        vnTotal += parseInt(vCalculo.toString().substring(0, 1)) + parseInt(vCalculo.toString().substring(1, 2));
+      }
+    }
+    
+    const verificador = parseInt(vcRNC.substring(10, 11));
+    const residuo = vnTotal % 10;
+    if (residuo === 0 && verificador === 0) return true;
+    if ((10 - residuo) === verificador) return true;
+    return false;
   }
-  closeModal()
+  
+  return false;
+}
+
+const save = async () => {
+  if (!esUnRNCValido(form.value.cedulaRnc, form.value.tipoDocumento)) {
+    alert("El documento introducido no es válido para el tipo seleccionado.");
+    return;
+  }
+
+  try {
+    if (isEditing.value) {
+      await store.editProveedor(form.value.id, form.value)
+    } else {
+      await store.addProveedor({ 
+        tipoDocumento: form.value.tipoDocumento,
+        cedulaRnc: form.value.cedulaRnc, 
+        nombreComercial: form.value.nombreComercial, 
+        estado: form.value.estado 
+      })
+    }
+    closeModal()
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message) {
+      alert("Error: " + error.response.data.message);
+    } else {
+      alert("Error al guardar el proveedor. Verifique los datos o revise la consola.");
+    }
+  }
 }
 
 const remove = async (id) => {
@@ -60,6 +125,12 @@ const remove = async (id) => {
 
     <!-- Table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+        <div class="relative w-full max-w-md">
+          <Search class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" v-model="searchQuery" placeholder="Buscar proveedores..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
@@ -71,7 +142,7 @@ const remove = async (id) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in proveedores" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <tr v-for="item in filteredProveedores" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
             <td class="py-3 px-6 text-gray-600">{{ item.id }}</td>
             <td class="py-3 px-6 font-medium text-gray-600">{{ item.cedulaRnc }}</td>
             <td class="py-3 px-6 font-medium text-gray-800">{{ item.nombreComercial }}</td>
@@ -99,8 +170,21 @@ const remove = async (id) => {
         </div>
         <form @submit.prevent="save" class="p-6">
           <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Documento</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="form.tipoDocumento" value="RNC" class="text-emerald-600 focus:ring-emerald-500">
+                <span class="text-gray-700 text-sm">RNC (9 dígitos)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="form.tipoDocumento" value="Cedula" class="text-emerald-600 focus:ring-emerald-500">
+                <span class="text-gray-700 text-sm">Cédula (11 dígitos)</span>
+              </label>
+            </div>
+          </div>
+          <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Cédula / RNC</label>
-            <input v-model="form.cedulaRnc" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            <input v-model="form.cedulaRnc" type="text" :maxlength="form.tipoDocumento === 'RNC' ? 9 : 11" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
           </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Comercial</label>

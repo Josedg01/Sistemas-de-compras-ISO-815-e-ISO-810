@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useOrdenesCompraStore } from '../stores/ordenesCompraStore'
 import { useArticulosStore } from '../stores/articulosStore'
@@ -7,33 +7,42 @@ import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
 import { useProveedoresStore } from '../stores/proveedoresStore'
 import { useDepartamentosStore } from '../stores/departamentosStore'
 import { useEmpleadosStore } from '../stores/empleadosStore'
-import { Plus, Send, X, CheckCircle, Check } from '@lucide/vue'
+import { Plus, Send, X, CheckCircle, Check, Search } from '@lucide/vue'
 
 const store = useOrdenesCompraStore()
 const { ordenes, isLoading } = storeToRefs(store)
 
+const proveedoresStore = useProveedoresStore()
+const { proveedores } = storeToRefs(proveedoresStore)
+const depsStore = useDepartamentosStore()
+const { departamentos } = storeToRefs(depsStore)
+const empleadosStore = useEmpleadosStore()
+const { empleados } = storeToRefs(empleadosStore)
 const articulosStore = useArticulosStore()
 const { articulos } = storeToRefs(articulosStore)
-
 const unidadesStore = useUnidadesMedidaStore()
 const { unidades } = storeToRefs(unidadesStore)
 
-const proveedoresStore = useProveedoresStore()
-const { proveedores } = storeToRefs(proveedoresStore)
-
-const departamentosStore = useDepartamentosStore()
-const { departamentos } = storeToRefs(departamentosStore)
-
-const empleadosStore = useEmpleadosStore()
-const { empleados } = storeToRefs(empleadosStore)
-
 onMounted(async () => {
   store.fetchOrdenes()
+  if (proveedores.value.length === 0) proveedoresStore.fetchProveedores()
+  if (departamentos.value.length === 0) depsStore.fetchDepartamentos()
+  if (empleados.value.length === 0) empleadosStore.fetchEmpleados()
   if (articulos.value.length === 0) articulosStore.fetchArticulos()
   if (unidades.value.length === 0) unidadesStore.fetchUnidades()
-  if (proveedores.value.length === 0) proveedoresStore.fetchProveedores()
-  if (departamentos.value.length === 0) departamentosStore.fetchDepartamentos()
-  if (empleados.value.length === 0) empleadosStore.fetchEmpleados()
+})
+
+const searchQuery = ref('')
+const filteredOrdenes = computed(() => {
+  if (!searchQuery.value) return ordenes.value
+  const q = searchQuery.value.toLowerCase()
+  return ordenes.value.filter(o => 
+    o.numero.toString().includes(q) ||
+    o.estado.toLowerCase().includes(q) ||
+    o.proveedorNombre.toLowerCase().includes(q) ||
+    o.departamentoNombre.toLowerCase().includes(q) ||
+    (o.detalles && o.detalles.some(d => d.articuloDescripcion.toLowerCase().includes(q)))
+  )
 })
 
 const showModal = ref(false)
@@ -85,6 +94,11 @@ const aprobar = async (orden) => {
 }
 
 const save = async () => {
+  if (form.value.cantidad <= 0 || form.value.costoUnitario <= 0) {
+    alert("La cantidad y el costo unitario deben ser mayores a 0.")
+    return
+  }
+
   const payload = {
     fechaOrden: form.value.fechaOrden,
     proveedorId: form.value.proveedorId,
@@ -145,22 +159,28 @@ const formatCurrency = (val) => {
     </div>
 
     <!-- Table -->
-    <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-      <table class="w-full text-left border-collapse min-w-[800px]">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+        <div class="relative w-full max-w-md">
+          <Search class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" v-model="searchQuery" placeholder="Buscar órdenes..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
+      <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
-            <th class="py-3 px-6 font-semibold">No. Orden</th>
+            <th class="py-3 px-6 font-semibold">Número</th>
             <th class="py-3 px-6 font-semibold">Fecha</th>
             <th class="py-3 px-6 font-semibold">Proveedor</th>
             <th class="py-3 px-6 font-semibold">Departamento</th>
             <th class="py-3 px-6 font-semibold">Artículo(s)</th>
-            <th class="py-3 px-6 font-semibold text-right">Total</th>
+            <th class="py-3 px-6 font-semibold">Total</th>
             <th class="py-3 px-6 font-semibold text-center">Estado</th>
             <th class="py-3 px-6 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in ordenes" :key="item.numero" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <tr v-for="item in filteredOrdenes" :key="item.numero" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
             <td class="py-3 px-6 font-medium text-gray-800">OC-{{ item.numero }}</td>
             <td class="py-3 px-6 text-gray-600">{{ new Date(item.fechaOrden).toLocaleDateString() }}</td>
             <td class="py-3 px-6 text-gray-600">{{ item.proveedorNombre }}</td>
@@ -240,11 +260,11 @@ const formatCurrency = (val) => {
             
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
-              <input v-model="form.cantidad" type="number" min="1" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <input v-model="form.cantidad" type="number" min="0.01" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Costo Unitario</label>
-              <input v-model="form.costoUnitario" type="number" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+              <input v-model="form.costoUnitario" type="number" min="0.01" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
           </div>
           

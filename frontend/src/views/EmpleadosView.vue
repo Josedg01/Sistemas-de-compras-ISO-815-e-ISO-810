@@ -1,9 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEmpleadosStore } from '../stores/empleadosStore'
 import { useDepartamentosStore } from '../stores/departamentosStore'
-import { Plus, Edit, Trash2, X } from '@lucide/vue'
+import { Plus, Edit, Trash2, X, Search } from '@lucide/vue'
 
 const store = useEmpleadosStore()
 const { empleados, isLoading } = storeToRefs(store)
@@ -14,6 +14,18 @@ const { departamentos } = storeToRefs(depStore)
 onMounted(() => {
   store.fetchEmpleados()
   if (departamentos.value.length === 0) depStore.fetchDepartamentos()
+})
+
+const searchQuery = ref('')
+const filteredEmpleados = computed(() => {
+  if (!searchQuery.value) return empleados.value
+  const q = searchQuery.value.toLowerCase()
+  return empleados.value.filter(e => 
+    e.nombre.toLowerCase().includes(q) ||
+    e.estado.toLowerCase().includes(q) ||
+    e.id.toString().includes(q) ||
+    (e.departamentoNombre && e.departamentoNombre.toLowerCase().includes(q))
+  )
 })
 
 const showModal = ref(false)
@@ -65,18 +77,24 @@ const remove = async (id) => {
 
     <!-- Table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+        <div class="relative w-full max-w-md">
+          <Search class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" v-model="searchQuery" placeholder="Buscar empleados..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
             <th class="py-3 px-6 font-semibold">ID</th>
             <th class="py-3 px-6 font-semibold">Nombre</th>
             <th class="py-3 px-6 font-semibold">Departamento</th>
-            <th class="py-3 px-6 font-semibold text-center">Estado</th>
+            <th class="py-3 px-6 font-semibold">Estado</th>
             <th class="py-3 px-6 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in empleados" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <tr v-for="item in filteredEmpleados" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
             <td class="py-3 px-6 font-medium text-gray-800">{{ item.id }}</td>
             <td class="py-3 px-6 text-gray-600">{{ item.nombre }}</td>
             <td class="py-3 px-6 text-gray-600">{{ item.departamentoNombre }}</td>

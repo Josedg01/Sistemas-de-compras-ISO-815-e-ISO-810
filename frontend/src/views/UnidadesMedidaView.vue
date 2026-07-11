@@ -1,14 +1,25 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
-import { Plus, Edit2, Trash2, X } from '@lucide/vue'
+import { Plus, Edit2, Trash2, X, Search } from '@lucide/vue'
 
 const store = useUnidadesMedidaStore()
 const { unidades, isLoading } = storeToRefs(store)
 
 onMounted(() => {
   store.fetchUnidades()
+})
+
+const searchQuery = ref('')
+const filteredUnidades = computed(() => {
+  if (!searchQuery.value) return unidades.value
+  const q = searchQuery.value.toLowerCase()
+  return unidades.value.filter(u => 
+    u.descripcion.toLowerCase().includes(q) ||
+    u.estado.toLowerCase().includes(q) ||
+    u.id.toString().includes(q)
+  )
 })
 
 const showModal = ref(false)
@@ -60,6 +71,12 @@ const remove = async (id) => {
 
     <!-- Table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+        <div class="relative w-full max-w-md">
+          <Search class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" v-model="searchQuery" placeholder="Buscar unidades..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
@@ -70,7 +87,7 @@ const remove = async (id) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in unidades" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+          <tr v-for="item in filteredUnidades" :key="item.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
             <td class="py-3 px-6 text-gray-600">{{ item.id }}</td>
             <td class="py-3 px-6 font-medium text-gray-800">{{ item.descripcion }}</td>
             <td class="py-3 px-6">

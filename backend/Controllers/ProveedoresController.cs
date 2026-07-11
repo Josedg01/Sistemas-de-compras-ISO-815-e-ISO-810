@@ -20,6 +20,42 @@ public class ProveedoresController : ControllerBase
 
     private static ProveedorDto ToDto(Proveedor p) => new(p.Id, p.CedulaRnc, p.NombreComercial, p.Estado);
 
+    private bool esUnRNCValido(string pRNC)
+    {
+        if (string.IsNullOrWhiteSpace(pRNC)) return false;
+        string vcRNC = pRNC.Replace("-", "").Replace(" ", "");
+        
+        if (vcRNC.Length == 9)
+        {
+            // Solo validar que sean 9 numeros
+            return vcRNC.All(char.IsDigit);
+        }
+        else if (vcRNC.Length == 11)
+        {
+            // Validacion Cedula (11 digitos) - Algoritmo de Luhn Modulo 10
+            int vnTotal = 0;
+            int[] digitoMult = new int[10] { 1, 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+
+            for (int vDig = 1; vDig <= 10; vDig++)
+            {
+                int vCalculo = Int32.Parse(vcRNC.Substring(vDig - 1, 1)) * digitoMult[vDig - 1];
+                if (vCalculo < 10)
+                    vnTotal += vCalculo;
+                else
+                    vnTotal += Int32.Parse(vCalculo.ToString().Substring(0, 1)) + Int32.Parse(vCalculo.ToString().Substring(1, 1));
+            }
+
+            int verificador = Int32.Parse(vcRNC.Substring(10, 1));
+            int residuo = vnTotal % 10;
+            
+            if (residuo == 0 && verificador == 0) return true;
+            if ((10 - residuo) == verificador) return true;
+            return false;
+        }
+
+        return false;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProveedorDto>>> GetAll([FromQuery] EstadoRegistro? estado)
     {
@@ -44,6 +80,12 @@ public class ProveedoresController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ProveedorDto>> Create(ProveedorUpsertDto dto)
     {
+        if (!esUnRNCValido(dto.CedulaRnc))
+            return BadRequest(new { message = "El RNC/Cédula proporcionado no es válido." });
+
+        if (await _context.Proveedores.AnyAsync(p => p.CedulaRnc == dto.CedulaRnc))
+            return BadRequest(new { message = $"Ya existe un proveedor registrado con el RNC/Cédula {dto.CedulaRnc}." });
+
         var proveedor = new Proveedor
         {
             CedulaRnc = dto.CedulaRnc,
@@ -58,6 +100,12 @@ public class ProveedoresController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, ProveedorUpsertDto dto)
     {
+        if (!esUnRNCValido(dto.CedulaRnc))
+            return BadRequest(new { message = "El RNC/Cédula proporcionado no es válido." });
+
+        if (await _context.Proveedores.AnyAsync(p => p.CedulaRnc == dto.CedulaRnc && p.Id != id))
+            return BadRequest(new { message = $"Ya existe otro proveedor registrado con el RNC/Cédula {dto.CedulaRnc}." });
+
         var proveedor = await _context.Proveedores.FindAsync(id);
         if (proveedor is null) return NotFound();
 

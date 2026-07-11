@@ -62,17 +62,17 @@ public class AppDbContext : DbContext
             e.HasOne(o => o.Proveedor)
                 .WithMany(p => p.OrdenesCompra)
                 .HasForeignKey(o => o.ProveedorId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             e.HasOne(o => o.Departamento)
                 .WithMany(d => d.OrdenesCompra)
                 .HasForeignKey(o => o.DepartamentoId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             e.HasOne(o => o.Empleado)
                 .WithMany(emp => emp.OrdenesCompra)
                 .HasForeignKey(o => o.EmpleadoId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<OrdenCompraDetalle>(e =>
@@ -88,7 +88,7 @@ public class AppDbContext : DbContext
             e.HasOne(d => d.Articulo)
                 .WithMany(a => a.DetallesOrdenCompra)
                 .HasForeignKey(d => d.ArticuloId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             e.HasOne(d => d.UnidadMedida)
                 .WithMany()

@@ -50,7 +50,11 @@ const save = async () => {
 
 const remove = async (id) => {
   if (confirm('¿Está seguro de eliminar esta unidad de medida?')) {
-    await store.removeUnidad(id)
+    try {
+      await store.removeUnidad(id)
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al eliminar la unidad de medida.")
+    }
   }
 }
 </script>

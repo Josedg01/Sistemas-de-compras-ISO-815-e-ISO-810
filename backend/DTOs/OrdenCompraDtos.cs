@@ -4,7 +4,7 @@ namespace SistemaDeCompras.DTOs;
 
 public record OrdenCompraDetalleDto(
     int Id,
-    int ArticuloId,
+    int? ArticuloId,
     string ArticuloDescripcion,
     decimal Cantidad,
     int UnidadMedidaId,
@@ -22,11 +22,11 @@ public record OrdenCompraDto(
     int Numero,
     DateTime FechaOrden,
     EstadoOrdenCompra Estado,
-    int ProveedorId,
+    int? ProveedorId,
     string ProveedorNombre,
-    int DepartamentoId,
+    int? DepartamentoId,
     string DepartamentoNombre,
-    int EmpleadoId,
+    int? EmpleadoId,
     string EmpleadoNombre,
     decimal Total,
     List<OrdenCompraDetalleDto> Detalles);

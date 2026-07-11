@@ -51,7 +51,7 @@ public class UnidadesMedidaController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, UnidadMedidaUpsertDto dto)
+    public async Task<ActionResult<UnidadMedidaDto>> Update(int id, UnidadMedidaUpsertDto dto)
     {
         var unidad = await _context.UnidadesMedida.FindAsync(id);
         if (unidad is null) return NotFound();
@@ -59,16 +59,21 @@ public class UnidadesMedidaController : ControllerBase
         unidad.Descripcion = dto.Descripcion;
         unidad.Estado = dto.Estado;
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok(ToDto(unidad));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Deactivate(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var unidad = await _context.UnidadesMedida.FindAsync(id);
         if (unidad is null) return NotFound();
 
-        unidad.Estado = EstadoRegistro.Inactivo;
+        var enUso = await _context.Articulos.AnyAsync(a => a.UnidadMedidaId == id)
+            || await _context.DetallesOrdenCompra.AnyAsync(d => d.UnidadMedidaId == id);
+        if (enUso)
+            return BadRequest(new { message = "No se puede eliminar la unidad de medida porque tiene artículos u órdenes de compra asociadas." });
+
+        _context.UnidadesMedida.Remove(unidad);
         await _context.SaveChangesAsync();
         return NoContent();
     }

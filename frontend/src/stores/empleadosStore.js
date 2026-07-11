@@ -47,12 +47,10 @@ export const useEmpleadosStore = defineStore('empleados', {
       this.isLoading = true
       try {
         await deleteEmpleado(id)
-        const index = this.empleados.findIndex(e => e.id === id)
-        if (index !== -1) {
-          this.empleados[index].estado = 'Inactivo'
-        }
+        this.empleados = this.empleados.filter(e => e.id !== id)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }

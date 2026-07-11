@@ -70,7 +70,11 @@ const save = async () => {
 
 const remove = async (id) => {
   if (confirm('¿Está seguro de eliminar este artículo?')) {
-    await store.removeArticulo(id)
+    try {
+      await store.removeArticulo(id)
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al eliminar el artículo.")
+    }
   }
 }
 

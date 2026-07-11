@@ -64,7 +64,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, ArticuloUpsertDto dto)
+    public async Task<ActionResult<ArticuloDto>> Update(int id, ArticuloUpsertDto dto)
     {
         var articulo = await _context.Articulos.FindAsync(id);
         if (articulo is null) return NotFound();
@@ -78,16 +78,22 @@ public class ArticulosController : ControllerBase
         articulo.Existencia = dto.Existencia;
         articulo.Estado = dto.Estado;
         await _context.SaveChangesAsync();
-        return NoContent();
+        await _context.Entry(articulo).Reference(a => a.UnidadMedida).LoadAsync();
+        return Ok(ToDto(articulo));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Deactivate(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var articulo = await _context.Articulos.FindAsync(id);
         if (articulo is null) return NotFound();
 
-        articulo.Estado = EstadoRegistro.Inactivo;
+        var enUso = await _context.DetallesOrdenCompra.AnyAsync(d => d.ArticuloId == id
+            && d.OrdenCompra!.Estado != EstadoOrdenCompra.Recibida && d.OrdenCompra.Estado != EstadoOrdenCompra.Cancelada);
+        if (enUso)
+            return BadRequest(new { message = "No se puede eliminar el artículo porque tiene órdenes de compra pendientes/aprobadas asociadas." });
+
+        _context.Articulos.Remove(articulo);
         await _context.SaveChangesAsync();
         return NoContent();
     }

@@ -7,7 +7,7 @@ import { useUnidadesMedidaStore } from '../stores/unidadesMedidaStore'
 import { useProveedoresStore } from '../stores/proveedoresStore'
 import { useDepartamentosStore } from '../stores/departamentosStore'
 import { useEmpleadosStore } from '../stores/empleadosStore'
-import { Plus, Send, X, CheckCircle, Check, Search } from '@lucide/vue'
+import { Plus, Send, X, CheckCircle, Check, Search, Ban } from '@lucide/vue'
 
 const store = useOrdenesCompraStore()
 const { ordenes, isLoading } = storeToRefs(store)
@@ -33,10 +33,19 @@ onMounted(async () => {
 })
 
 const searchQuery = ref('')
+const activeTab = ref('enProceso')
+
+const tabFilteredOrdenes = computed(() => {
+  if (activeTab.value === 'enProceso') {
+    return ordenes.value.filter(o => o.estado === 'Pendiente' || o.estado === 'Aprobada')
+  }
+  return ordenes.value.filter(o => o.estado === 'Recibida' || o.estado === 'Cancelada')
+})
+
 const filteredOrdenes = computed(() => {
-  if (!searchQuery.value) return ordenes.value
+  if (!searchQuery.value) return tabFilteredOrdenes.value
   const q = searchQuery.value.toLowerCase()
-  return ordenes.value.filter(o => 
+  return tabFilteredOrdenes.value.filter(o =>
     o.numero.toString().includes(q) ||
     o.estado.toLowerCase().includes(q) ||
     o.proveedorNombre.toLowerCase().includes(q) ||
@@ -88,7 +97,17 @@ const aprobar = async (orden) => {
     try {
       await store.aprobarOrden(orden.numero)
     } catch (e) {
-      alert("Error al aprobar orden: " + e.message)
+      alert(e.response?.data?.message || "Error al aprobar orden.")
+    }
+  }
+}
+
+const cancelar = async (orden) => {
+  if (confirm(`¿Está seguro de cancelar la orden ${orden.numero}?`)) {
+    try {
+      await store.cancelarOrden(orden.numero)
+    } catch (e) {
+      alert(e.response?.data?.message || "Error al cancelar orden.")
     }
   }
 }
@@ -125,7 +144,7 @@ const sendAsiento = async (orden) => {
       orderRecibidaId.value = orden.numero
       setTimeout(() => asientoSuccess.value = false, 5000)
     } catch (e) {
-      alert("Error al recibir orden.")
+      alert(e.response?.data?.message || "Error al recibir orden.")
     }
   }
 }
@@ -151,6 +170,26 @@ const formatCurrency = (val) => {
         <h4 class="text-emerald-800 font-semibold">Orden Recibida / Asiento Generado</h4>
         <p class="text-emerald-600 text-sm mt-1">La orden No. {{ orderRecibidaId }} ha sido recibida y el asiento contable fue enviado al backend.</p>
       </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-4">
+      <button
+        @click="activeTab = 'enProceso'"
+        :class="[
+          'px-4 py-2 rounded-lg font-medium text-sm transition-colors',
+          activeTab === 'enProceso' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+        ]">
+        En Proceso
+      </button>
+      <button
+        @click="activeTab = 'historial'"
+        :class="[
+          'px-4 py-2 rounded-lg font-medium text-sm transition-colors',
+          activeTab === 'historial' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+        ]">
+        Historial (Recibidas / Canceladas)
+      </button>
     </div>
 
     <!-- Loading -->
@@ -204,12 +243,15 @@ const formatCurrency = (val) => {
               <button v-if="item.estado === 'Pendiente'" @click="aprobar(item)" class="text-blue-600 hover:text-blue-800 mr-3 p-1 rounded-md hover:bg-blue-50 transition-colors inline-block" title="Aprobar Orden">
                 <Check class="w-4 h-4" />
               </button>
+              <button v-if="item.estado === 'Pendiente'" @click="cancelar(item)" class="text-red-600 hover:text-red-800 mr-3 p-1 rounded-md hover:bg-red-50 transition-colors inline-block" title="Cancelar Orden">
+                <Ban class="w-4 h-4" />
+              </button>
               <button v-if="item.estado === 'Aprobada'" @click="sendAsiento(item)" class="text-emerald-600 hover:text-emerald-800 mr-3 p-1 rounded-md hover:bg-emerald-50 transition-colors inline-block" title="Marcar como Recibida (Generar Asiento)">
                 <Send class="w-4 h-4" />
               </button>
             </td>
           </tr>
-          <tr v-if="ordenes.length === 0"><td colspan="8" class="py-8 text-center text-gray-500">No hay órdenes de compra registradas.</td></tr>
+          <tr v-if="filteredOrdenes.length === 0"><td colspan="8" class="py-8 text-center text-gray-500">No hay órdenes de compra en esta vista.</td></tr>
         </tbody>
       </table>
     </div>

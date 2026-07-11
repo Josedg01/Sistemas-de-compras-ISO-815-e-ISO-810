@@ -51,7 +51,7 @@ public class DepartamentosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, DepartamentoUpsertDto dto)
+    public async Task<ActionResult<DepartamentoDto>> Update(int id, DepartamentoUpsertDto dto)
     {
         var departamento = await _context.Departamentos.FindAsync(id);
         if (departamento is null) return NotFound();
@@ -59,16 +59,22 @@ public class DepartamentosController : ControllerBase
         departamento.Nombre = dto.Nombre;
         departamento.Estado = dto.Estado;
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok(ToDto(departamento));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Deactivate(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var departamento = await _context.Departamentos.FindAsync(id);
         if (departamento is null) return NotFound();
 
-        departamento.Estado = EstadoRegistro.Inactivo;
+        var enUso = await _context.Empleados.AnyAsync(e => e.DepartamentoId == id)
+            || await _context.OrdenesCompra.AnyAsync(o => o.DepartamentoId == id
+                && o.Estado != EstadoOrdenCompra.Recibida && o.Estado != EstadoOrdenCompra.Cancelada);
+        if (enUso)
+            return BadRequest(new { message = "No se puede eliminar el departamento porque tiene empleados u órdenes de compra pendientes/aprobadas asociadas." });
+
+        _context.Departamentos.Remove(departamento);
         await _context.SaveChangesAsync();
         return NoContent();
     }

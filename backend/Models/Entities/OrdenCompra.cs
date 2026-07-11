@@ -8,13 +8,13 @@ public class OrdenCompra
     public DateTime FechaOrden { get; set; }
     public EstadoOrdenCompra Estado { get; set; } = EstadoOrdenCompra.Pendiente;
 
-    public int ProveedorId { get; set; }
+    public int? ProveedorId { get; set; }
     public Proveedor? Proveedor { get; set; }
 
-    public int DepartamentoId { get; set; }
+    public int? DepartamentoId { get; set; }
     public Departamento? Departamento { get; set; }
 
-    public int EmpleadoId { get; set; }
+    public int? EmpleadoId { get; set; }
     public Empleado? Empleado { get; set; }
 
     public ICollection<OrdenCompraDetalle> Detalles { get; set; } = new List<OrdenCompraDetalle>();

@@ -48,6 +48,7 @@ export const useUnidadesMedidaStore = defineStore('unidadesMedida', {
         this.unidades = this.unidades.filter(u => u.id !== id)
       } catch (err) {
         this.error = err.message
+        throw err
       } finally {
         this.isLoading = false
       }

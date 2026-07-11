@@ -52,7 +52,11 @@ const save = async () => {
 
 const remove = async (id) => {
   if (confirm('¿Está seguro de eliminar este departamento?')) {
-    await store.removeDepartamento(id)
+    try {
+      await store.removeDepartamento(id)
+    } catch (error) {
+      alert(error.response?.data?.message || "Error al eliminar el departamento.")
+    }
   }
 }
 </script>
